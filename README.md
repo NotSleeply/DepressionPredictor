@@ -52,23 +52,9 @@ DepressionPredictor/
 
    结果（如模型、图表等）会保存在 `outputs/` 目录。
 
-## 主要依赖
+## 成就
 
-- torch、torchvision、torchaudio
-- transformers
-- scikit-learn
-- pandas
-- matplotlib、seaborn
-- imblearn
-- nltk
-- shap
-- emoji
-
-详见 `pyproject.toml`。
-
-## 贡献与反馈
-
-欢迎提交Issue或PR，提出建议或贡献代码！
+- 获取[全国大学生统计建模大赛](http://tjjmds.ai-learning.net)国赛资格(2025年)
 
 ## 许可证
 
