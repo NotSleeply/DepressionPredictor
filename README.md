@@ -9,7 +9,16 @@
 - **可解释性分析**：集成SHAP等工具，分析模型决策的关键特征。
 - **可视化丰富**：输出多种可视化图表，辅助理解模型表现与数据分布。
 
-## 数据集
+## 快速启动
+
+```shell
+  uv venv .venv     // 创建虚拟环境
+  uv activate venv  // 激活虚拟环境
+  uv sync           // 安装依赖
+  uv run start      // 运行main.py
+```
+
+## 参考资料
 
 - [Mental-Health-Twitter.csv](./data/Mental-Health-Twitter.csv) : 来源为[Kaggle](https://www.kaggle.com/)公开数据集的[Depression: Twitter Dataset + Feature Extraction](https://www.kaggle.com/datasets/infamouscoder/mental-health-social-media?resource=download)，包含推文文本及其抑郁标签。
 

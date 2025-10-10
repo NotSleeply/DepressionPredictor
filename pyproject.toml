@@ -1,35 +1,39 @@
 [project]
-name = "code"
+name = "multimodal-depression-predictor"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.10"
+description = "多模态抑郁倾向预测项目"
+authors = [{name = "User", email = "user@example.com"}]
 dependencies = [
-    "emoji>=2.14.1",
-    "imblearn>=0.0",
-    "matplotlib>=3.10.3",
-    "nltk>=3.9.1",
-    "nn>=0.1.1",
-    "pandas>=2.3.0",
-    "scikit-learn==1.0.2",
-    "seaborn>=0.13.2",
-    "shap>=0.47.2",
-    "torch>=2.7.1",
-    "torchaudio>=2.6.0",
-    "torchvision>=0.21.0",
-    "transformers>=4.52.4",
+    # 核心数据处理与科学计算
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    
+    # 深度学习框架 (重要: 不指定URL，让uv自己去额外索引源查找)
+    "torch",
+    "torchaudio",
+    "torchvision",
+    
+    # NLP 和文本处理
+    "transformers",
+    "nltk",
+    "emoji",
+    
+    # 模型可解释性
+    "shap",
+    
+    # 采样处理不平衡数据
+    "imbalanced-learn", # 使用更规范的包名
+    
+    # 可视化
+    "matplotlib",
+    "seaborn",
 ]
+requires-python = ">=3.8,<3.13"
+license = "MIT"
 
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cu121"]
 
-[tool.uv.sources]
-torch = [
-  { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-torchvision = [
-  { index = "pytorch-cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-
-[[tool.uv.index]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
-explicit = true
+[tool.uv.scripts]
+start = "python src/main.py"
