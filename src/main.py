@@ -1,5 +1,6 @@
 # 多模态抑郁倾向预测完整训练脚本（可本地运行，支持GPU）
 
+from sklearn.metrics import roc_curve
 import pandas as pd
 import numpy as np
 import torch
@@ -33,36 +34,42 @@ print(f"使用设备: {DEVICE}")
 
 
 # 在其他导入语句之后，绘图之前添加以下字体设置
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']  # 优先使用的中文字体
+matplotlib.rcParams['font.sans-serif'] = ['SimHei',
+                                          'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']  # 优先使用的中文字体
 matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示为方框的问题# 文本标准化处理
 
 # ========== 数据准备 ==========
 print("开始数据准备...")
 
 # 数据加载
-DATA_PATH = "./Mental-Health-Twitter.csv"
+DATA_PATH = "../data/Mental-Health-Twitter.csv"
 df = pd.read_csv(DATA_PATH)
 df = df.dropna(subset=['post_text'])
 print(f"数据加载完成，共 {len(df)} 条记录")
 
-# 文本清洗
+
 def clean_text(text):
+    ''' 清洗文本数据 '''
     text = str(text)  # 确保是字符串
     text = re.sub(r"http\S+|www\S+|https\S+", '', text)
     text = re.sub(r"@\w+", '', text)
     text = re.sub(r"[^A-Za-z0-9 ]+", ' ', text)
     return text.lower()
-    
+
+
 df['clean_text'] = df['post_text'].apply(clean_text)
 print("文本清洗完成")
 
 # 情感得分（VADER）
 print("进行情感分析...")
 sia = SentimentIntensityAnalyzer()
-df['sentiment'] = df['clean_text'].apply(lambda x: sia.polarity_scores(x)['compound'])
+df['sentiment'] = df['clean_text'].apply(
+    lambda x: sia.polarity_scores(x)['compound'])
 
 # 表情情绪比例（正/中/负）
 print("分析表情符号...")
+
+
 def emoji_sentiment_ratio(text):
     pos, neg, neu = 0, 0, 0
     for ch in text:
@@ -76,11 +83,15 @@ def emoji_sentiment_ratio(text):
                 neu += 1
     total = pos + neg + neu if pos + neg + neu > 0 else 1
     return [pos/total, neu/total, neg/total]
-    
-df[['pos_emoji', 'neu_emoji', 'neg_emoji']] = df['post_text'].apply(emoji_sentiment_ratio).apply(pd.Series)
+
+
+df[['pos_emoji', 'neu_emoji', 'neg_emoji']] = df['post_text'].apply(
+    emoji_sentiment_ratio).apply(pd.Series)
 
 # 时间模态处理
 print("处理时间特征...")
+
+
 def extract_time_features(ts):
     try:
         # API 标准时间格式
@@ -91,11 +102,14 @@ def extract_time_features(ts):
         # 记录错误并返回默认值
         return [0.5, 0]  # 返回默认值
 
-df[['hour_norm', 'is_night']] = df['post_created'].apply(extract_time_features).apply(pd.Series)
+
+df[['hour_norm', 'is_night']] = df['post_created'].apply(
+    extract_time_features).apply(pd.Series)
 
 # 社交数值特征 + 标准化
 print("标准化社交特征...")
-social_features = ['followers', 'friends', 'favourites', 'statuses', 'retweets']
+social_features = ['followers', 'friends',
+                   'favourites', 'statuses', 'retweets']
 scaler = StandardScaler()
 df[social_features] = scaler.fit_transform(df[social_features])
 
@@ -126,17 +140,17 @@ else:
     for i in range(0, len(df), batch_size):
         if i % (batch_size * 10) == 0:
             print(f"处理BERT特征: {i}/{len(df)}")
-        
+
         batch_texts = df['clean_text'].iloc[i:i+batch_size].tolist()
-        inputs = tokenizer(batch_texts, padding=True, truncation=True, 
-                          return_tensors="pt", max_length=128)
-        
+        inputs = tokenizer(batch_texts, padding=True, truncation=True,
+                           return_tensors="pt", max_length=128)
+
         # 将输入移至设备
         inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
-        
+
         with torch.no_grad():
             outputs = bert_model(**inputs)
-        
+
         # 获取 CLS token 嵌入
         cls_embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy()
         bert_features.extend(cls_embeddings)
@@ -170,12 +184,15 @@ print(f"过采样后样本分布: {np.bincount(y_resampled.astype(int))}")
 
 # 数据划分 - 添加验证集
 print("划分数据集...")
-X_train, X_temp, y_train, y_temp = train_test_split(X_resampled, y_resampled, test_size=0.3, random_state=42)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+X_train, X_temp, y_train, y_temp = train_test_split(
+    X_resampled, y_resampled, test_size=0.3, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.5, random_state=42)
 
 print(f"训练集: {X_train.shape[0]}个样本")
 print(f"验证集: {X_val.shape[0]}个样本")
 print(f"测试集: {X_test.shape[0]}个样本")
+
 
 class DepressionDataset(Dataset):
     def __init__(self, X, y):
@@ -188,6 +205,7 @@ class DepressionDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
 
+
 train_dataset = DepressionDataset(X_train, y_train)
 val_dataset = DepressionDataset(X_val, y_val)
 test_dataset = DepressionDataset(X_test, y_test)
@@ -197,6 +215,8 @@ val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 # ========== 模型定义 ==========
+
+
 class Classifier(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
@@ -217,13 +237,15 @@ class Classifier(nn.Module):
     def forward(self, x):
         return self.net(x).squeeze(1)
 
+
 model = Classifier(X_train.shape[1]).to(DEVICE)
 print(f"模型参数总数: {sum(p.numel() for p in model.parameters())}")
 
 # ========== 训练过程 ==========
 criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.5, verbose=True)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, 'min', patience=3, factor=0.5, verbose=True)
 
 # 记录训练历史
 history = {
@@ -251,10 +273,10 @@ for epoch in range(EPOCHS):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    
+
     avg_train_loss = total_loss / len(train_loader)
     history['train_loss'].append(avg_train_loss)
-    
+
     # 验证阶段
     model.eval()
     val_preds, val_targets = [], []
@@ -267,17 +289,17 @@ for epoch in range(EPOCHS):
             val_loss += loss.item()
             val_preds.extend(out.cpu().numpy())
             val_targets.extend(yb.cpu().numpy())
-    
+
     avg_val_loss = val_loss / len(val_loader)
     val_auc = roc_auc_score(val_targets, val_preds)
     history['val_loss'].append(avg_val_loss)
     history['val_auc'].append(val_auc)
-    
+
     print(f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, Val AUC: {val_auc:.4f}")
-    
+
     # 更新学习率
     scheduler.step(avg_val_loss)
-    
+
     # 早停检查
     if val_auc > best_auc:
         best_auc = val_auc
@@ -286,7 +308,7 @@ for epoch in range(EPOCHS):
         print(f"✓ 模型改善! 最佳验证AUC: {best_auc:.4f}")
     else:
         no_improve += 1
-    
+
     if no_improve >= patience:
         print(f"早停: {patience} 轮未改善")
         break
@@ -326,19 +348,20 @@ try:
     model.eval()  # 确保模型处于评估模式
 
     print(f"SHAP分析使用测试样本: {len(X_test)}")
-    
+
     # 拼接特征名（确保顺序与原始特征顺序一致）
     feature_names = [f"TFIDF_{i}" for i in range(tfidf_matrix.shape[1])] + [
         "sentiment", "hour_norm", "is_night", "pos_emoji", "neu_emoji", "neg_emoji"
     ] + social_features + [f"BERT_{i}" for i in range(bert_features.shape[1])]
 
     # 确保特征名称长度与特征数量一致
-    assert len(feature_names) == X_all.shape[1], f"特征名称数量 {len(feature_names)} 与特征数量 {X_all.shape[1]} 不匹配"
-    
+    assert len(
+        feature_names) == X_all.shape[1], f"特征名称数量 {len(feature_names)} 与特征数量 {X_all.shape[1]} 不匹配"
+
     # 改用 GradientExplainer 而不是 DeepExplainer
     # 准备一个小批量数据作为背景
     background = torch.tensor(X_train[:100], dtype=torch.float32).to(DEVICE)
-    
+
     # 创建一个包装类，使模型输出单个标量值
     class ModelWrapper(nn.Module):
         def __init__(self, model):
@@ -347,39 +370,39 @@ try:
 
         def forward(self, x):
             return self.model(x)
-    
+
     wrapped_model = ModelWrapper(model).to(DEVICE)
-    
+
     # 使用 Kernel SHAP 而不是 Deep SHAP (性能稍慢但更稳定)
     # 取一小部分数据进行演示
     sample_size = min(500, len(X_test))  # 最多使用500个样本用于展示
     X_sample = X_test[:sample_size]
-    
+
     # 创建 KernelExplainer (更稳定但计算成本更高)
     # 定义一个预测函数
     def f(x):
         with torch.no_grad():
             tensor_x = torch.tensor(x, dtype=torch.float32).to(DEVICE)
             return model(tensor_x).cpu().numpy()
-    
+
     # 使用一小部分背景数据
     explainer = shap.KernelExplainer(f, shap.kmeans(X_train, 50))
-    
+
     print("开始计算SHAP值...")
     # 计算SHAP值 (这可能需要一些时间)
     shap_values = explainer.shap_values(X_sample)
-    
+
     # 保存SHAP值
     np.save("shap_values.npy", shap_values)
-    
+
     print(f"SHAP分析完成，形状: {np.shape(shap_values)}")
-    
+
     # SHAP 值总结图
     plt.figure(figsize=(12, 10))
     shap.summary_plot(
-        shap_values, 
+        shap_values,
         X_sample,
-        feature_names=feature_names, 
+        feature_names=feature_names,
         show=False,
         max_display=20
     )
@@ -387,14 +410,14 @@ try:
     plt.tight_layout()
     plt.savefig("shap_summary_plot.png", dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     # 特征重要性条形图
     plt.figure(figsize=(14, 8))
     shap.summary_plot(
-        shap_values, 
+        shap_values,
         X_sample,
-        feature_names=feature_names, 
-        plot_type="bar", 
+        feature_names=feature_names,
+        plot_type="bar",
         show=False,
         max_display=20
     )
@@ -402,16 +425,16 @@ try:
     plt.tight_layout()
     plt.savefig("shap_feature_importance.png", dpi=300, bbox_inches='tight')
     plt.close()
-    
+
     print("已保存 SHAP 图：shap_summary_plot.png 和 shap_feature_importance.png")
-    
+
     # 获取并打印前20个最重要特征
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
     top_indices = np.argsort(-mean_abs_shap)
     print("\n模型最重要的20个特征:")
     for i, idx in enumerate(top_indices[:20]):
         print(f"{i+1}. {feature_names[idx]} (重要性: {mean_abs_shap[idx]:.6f})")
-    
+
     # 根据模态分组计算特征重要性
     feature_groups = {
         'TF-IDF': (0, tfidf_matrix.shape[1]),
@@ -424,8 +447,9 @@ try:
 
     group_importance = {}
     for group_name, (start_idx, end_idx) in feature_groups.items():
-        group_importance[group_name] = np.abs(shap_values[:, start_idx:end_idx]).mean()
-    
+        group_importance[group_name] = np.abs(
+            shap_values[:, start_idx:end_idx]).mean()
+
     # 绘制模态重要性图
     plt.figure(figsize=(10, 6))
     bars = plt.bar(group_importance.keys(), group_importance.values())
@@ -434,17 +458,17 @@ try:
     plt.title('各模态特征对模型预测的重要性')
     plt.xticks(rotation=45)
     plt.tight_layout()
-    
+
     # 在每个柱状图顶部添加数值
     for bar in bars:
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.4f}',
-                ha='center', va='bottom', fontsize=9)
-                
+                 f'{height:.4f}',
+                 ha='center', va='bottom', fontsize=9)
+
     plt.savefig('modality_importance.png', dpi=300)
     plt.close()
-    
+
 except Exception as e:
     import traceback
     print(f"SHAP分析出错: {str(e)}")
@@ -475,8 +499,6 @@ plt.savefig('training_history.png')
 plt.close()
 
 # 绘制ROC曲线
-from sklearn.metrics import roc_curve
-
 plt.figure(figsize=(8, 6))
 fpr, tpr, _ = roc_curve(targets, preds)
 plt.plot(fpr, tpr, label=f'AUC = {auc:.3f}')
