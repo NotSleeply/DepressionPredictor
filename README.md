@@ -25,32 +25,9 @@ DepressionPredictor/
 └── .python-version
 ```
 
-## 快速开始
+## 数据集
 
-1. **环境准备**
-
-   推荐使用 Python 3.10。可通过如下命令创建虚拟环境并安装依赖：
-
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install uv
-   uv pip install -r pyproject.toml
-   ```
-
-2. **数据准备**
-
-   将原始数据集放入 `data/` 目录，或根据实际需求调整。
-
-3. **运行主程序**
-
-   ```bash
-   python src/main.py
-   ```
-
-4. **查看输出**
-
-   结果（如模型、图表等）会保存在 `outputs/` 目录。
+- [Mental-Health-Twitter.csv](./data/Mental-Health-Twitter.csv) : 来源为[Kaggle](https://www.kaggle.com/)公开数据集的[Depression: Twitter Dataset + Feature Extraction](https://www.kaggle.com/datasets/infamouscoder/mental-health-social-media?resource=download)，包含推文文本及其抑郁标签。
 
 ## 成就
 
