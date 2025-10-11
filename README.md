@@ -22,6 +22,8 @@
 
 - [Mental-Health-Twitter.csv](./data/Mental-Health-Twitter.csv) : 来源为[Kaggle](https://www.kaggle.com/)公开数据集的[Depression: Twitter Dataset + Feature Extraction](https://www.kaggle.com/datasets/infamouscoder/mental-health-social-media?resource=download)，包含推文文本及其抑郁标签。
 
+- [暗知识：机器认知如何颠覆商业和社会](https://weread.qq.com/web/bookDetail/faa32030717f58b3faa40a7) ： 理解机器学习是什么的入门书籍。
+
 ## 成就
 
 - 获取[全国大学生统计建模大赛](http://tjjmds.ai-learning.net)国赛资格(2025年)
